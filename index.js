@@ -13,6 +13,7 @@ const regionRoutes = require('./routes/regionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const locationRoutes = require('./routes/locationRoutes');
 const proofRoutes = require('./routes/proofRoutes');
+const districtRoutes = require('./routes/districtRoutes');
 
 dotenv.config();
 const app = express();
@@ -30,6 +31,7 @@ app.use('/api/region', regionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/locations', locationRoutes);
+app.use('/api', districtRoutes);
 
 
 const PORT = process.env.PORT || 3000;

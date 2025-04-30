@@ -29,4 +29,17 @@ router.get('/eglises', (req, res) => {
   });
 });
 
+router.get("/eglises/by-district/:district_id", (req, res) => {
+    const district_id = req.params.district_id;
+  
+    db.query(
+      "SELECT id, name FROM eglise WHERE district_id = ?",
+      [district_id],
+      (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+      }
+    );
+  });
+
 module.exports = router;
