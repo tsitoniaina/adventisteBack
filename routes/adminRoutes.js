@@ -10,7 +10,7 @@ router.get("/users", verifyToken, (req, res) => {
   }
 
   const query = `
-    SELECT u.id, u.name, u.email, u.role, d.name AS district_name, r.name AS region_name
+    SELECT u.id, u.name, u.email, u.role, u.is_verified, d.name AS district_name, r.name AS region_name
     FROM users u
     LEFT JOIN districts d ON u.district_id = d.id
     LEFT JOIN regions r ON u.region_id = r.id
@@ -58,5 +58,29 @@ router.get("/memoires", verifyToken, (req, res) => {
     }
   );
 });
+
+router.patch('/users/:id/verify', (req, res) => {
+  const userId = parseInt(req.params.id, 10);
+
+  if (isNaN(userId)) {
+    return res.status(400).json({ error: 'ID utilisateur invalide.' });
+  }
+
+  const sql = 'UPDATE users SET is_verified = 1 WHERE id = ?';
+
+  db.query(sql, [userId], (err, result) => {
+    if (err) {
+      console.error('❌ Erreur SQL :', err);
+      return res.status(500).json({ error: 'Erreur lors de la mise à jour.' });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé.' });
+    }
+
+    res.json({ message: '✅ Utilisateur activé avec succès.' });
+  });
+});
+
 
 module.exports = router;

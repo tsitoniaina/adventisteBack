@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const path = require('path');
 
 const authRoutes = require('./routes/authRoutes');
 const aspirantRoutes = require('./routes/aspirantRoutes');
@@ -26,6 +27,7 @@ app.use('/api/memoires', memoireRoutes);
 app.use('/api/proofs', proofRoutes);
 app.use('/api/region', regionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 const PORT = process.env.PORT || 3000;
