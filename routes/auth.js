@@ -7,29 +7,53 @@ require('dotenv').config();
 const router = express.Router();
 
 router.post('/register', async (req, res) => {
-    const { name, email, password } = req.body;
-    console.log("Body reçu :", req.body);
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: "Tous les champs sont requis." });
-    }
-  
+  let { name, email, password, role, region_id, district_id, eglise_id } = req.body;
+
+  const toNullableInt = (val) => (val === '' || val === undefined || val === null) ? null : parseInt(val);
+  region_id = toNullableInt(region_id);
+  district_id = toNullableInt(district_id);
+  eglise_id = toNullableInt(eglise_id);
+
+  if (!name || !email || !password || !role) {
+    return res.status(400).json({ error: "Champs obligatoires manquants." });
+  }
+
+  try {
     const hashedPassword = await bcrypt.hash(password, 10);
-  
-    db.query(
-      'INSERT INTO districts (name, email, password) VALUES (?, ?, ?)',
-      [name, email, hashedPassword],
-      (err, result) => {
-        if (err) {
-          if (err.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ error: 'Email déjà utilisé.' });
-          }
-          return res.status(500).json({ error: err.message });
-        }
-        res.status(201).json({ message: 'Compte créé avec succès' });
+
+    if (role === 'coordinateur_district') {
+      if (!region_id || !district_id || !eglise_id) {
+        return res.status(400).json({ error: "Tous les champs (région, district, église) sont requis pour le coordinateur de district." });
       }
-    );
-  });
-  
+    } else {
+      region_id = null;
+      district_id = null;
+      eglise_id = null;
+    }
+
+    const sql = `
+      INSERT INTO users (name, email, password, role, region_id, district_id, eglise_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+    const values = [name, email, hashedPassword, role, region_id, district_id, eglise_id];
+
+    db.query(sql, values, (err, result) => {
+      if (err) {
+        console.error("❌ Erreur SQL :", err);
+        if (err.code === 'ER_DUP_ENTRY') {
+          return res.status(400).json({ error: "Email déjà utilisé." });
+        }
+        return res.status(500).json({ error: err.message });
+      }
+
+      res.status(201).json({ message: "Utilisateur inscrit avec succès." });
+    });
+
+  } catch (err) {
+    console.error("❌ Erreur serveur :", err);
+    res.status(500).json({ error: "Erreur serveur." });
+  }
+});
 router.post('/login', (req, res) => {
   const { email, password } = req.body;
 
