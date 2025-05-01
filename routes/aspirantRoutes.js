@@ -1,6 +1,7 @@
 
 const express = require('express');
 const db = require('../db');
+const bcrypt = require("bcrypt");
 const verifyToken = require('../middleware/authMiddleware'); 
 
 const router = express.Router();
@@ -22,7 +23,6 @@ router.post('/', verifyToken, (req, res) => {
   );
 });
 router.get("/district", verifyToken, (req, res) => {
-  console.log("✅ Route /aspirants/district appelée");
   const { role, district_id } = req.user;
 
   if (role !== "coordinateur_district") {
@@ -37,6 +37,51 @@ router.get("/district", verifyToken, (req, res) => {
       res.json(results);
     }
   );
+});
+
+router.post("/district", verifyToken, async (req, res) => {
+  const { name, email, password, parcours } = req.body;
+  const { district_id, region_id } = req.user;
+
+  if (!name || !email || !password || !parcours) {
+    return res.status(400).json({ error: "Champs requis manquants." });
+  }
+
+  if (!district_id || !region_id) {
+    return res.status(400).json({ error: "district_id ou region_id manquant pour l'utilisateur." });
+  }
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Étape 1 : créer l'utilisateur
+    const insertUser = `
+      INSERT INTO users (name, email, password, role, district_id, region_id)
+      VALUES (?, ?, ?, 'aspirant', ?, ?)
+    `;
+    db.query(insertUser, [name, email, hashedPassword, district_id, region_id], (err, result) => {
+      if (err) {
+        if (err.code === 'ER_DUP_ENTRY') {
+          return res.status(400).json({ error: "Email déjà utilisé." });
+        }
+        return res.status(500).json({ error: err.message });
+      }
+
+      const userId = result.insertId;
+
+      // Étape 2 : créer l'aspirant
+      const insertAspirant = `INSERT INTO aspirants (user_id, parcours, status) VALUES (?, ?, 'en_cours')`;
+      db.query(insertAspirant, [userId, parcours], (err2) => {
+        if (err2) {
+          return res.status(500).json({ error: err2.message });
+        }
+
+        return res.status(201).json({ message: "Aspirant ajouté avec succès." });
+      });
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur." });
+  }
 });
 
 
