@@ -3,11 +3,12 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 const sendConfirmationEmail = require('../utils/sendMail');
+const verifyToken = require("../middleware/authMiddleware");
 const router = express.Router();
 require('dotenv').config();
 
 router.post('/register', (req, res) => {
-  const { name, email, password, role, district_id, region_id } = req.body;
+  const { name, email, password, role, district_id, region_id ,eglise_id} = req.body;
 
   if (!name || !email || !password || !role) {
     return res.status(400).json({ error: 'Champs obligatoires manquants.' });
@@ -20,8 +21,8 @@ router.post('/register', (req, res) => {
     }
 
     db.query(
-      'INSERT INTO users (name, email, password, role, district_id, region_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [name, email, hashedPassword, role, district_id, region_id],
+      'INSERT INTO users (name, email, password, role, district_id, region_id, eglise_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [name, email, hashedPassword, role, district_id, region_id, eglise_id],
       async (err, result) => {
         if (err) {
           console.error("❌ Erreur MySQL :", err);
@@ -90,6 +91,19 @@ router.post('/login', (req, res) => {
     );
 
     res.json({ token, user });
+  });
+});
+
+router.get("/me/district", verifyToken, (req, res) => {
+  const userId = req.user.id;
+
+  db.query("SELECT district_id FROM users WHERE id = ?", [userId], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    if (results.length === 0) return res.status(404).json({ error: "Utilisateur non trouvé." });
+
+    const districtId = results[0].district_id;
+    res.json({ district_id: districtId });
   });
 });
 
